@@ -11,3 +11,9 @@ ChangeLog
 *.app
 *.sublime-project
 *.sublime-workspace
+*.DS_Store
+Info.plist
+qt_makeqmake.mak
+qt_preprocess.mak
+quackle.pro.user
+quacker.xcodeproj
