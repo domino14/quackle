@@ -23,6 +23,7 @@
 #include "simthread.h"
 
 SimThread::SimThread(QObject *parent) : QThread(parent) {
+    m_iterationsPerLoop = 10;
     m_simulator = new Quackle::Simulator;
 }
 
@@ -32,22 +33,27 @@ SimThread::~SimThread() {
 }
 
 void SimThread::startSim(int plies) {
-    // XXX: need to set a dispatch for m_simulator
     if (isRunning()) {
         UVcout << "SimThread is already running!" << endl;
         return;
     }
+    m_shouldAbort = false;
     m_plies = plies;
     start(QThread::HighPriority);
 }
 
 void SimThread::run() {
-    UVcout << "i am a sim thread and i am running!" << endl;
-    // Simulate 10 at a time?
-    m_simulator->simulate(m_plies, 10);
-    UVcout << "simulated 10 plies!" << endl;
-    // keep simulating...
-    UVcout << m_simulator->simmedMoves() << endl;
+    while (!m_shouldAbort) {
+        m_simulator->simulate(m_plies, m_iterationsPerLoop);
+        // UVcout << m_simulator->simmedMoves() << endl;
+        emit iterationsDone(m_iterationsPerLoop);
+    }
+    UVcout << "Ending simulation." << m_simulator->simmedMoves() << endl;
+}
+
+void SimThread::abort() {
+    // Abort the thread, ending the run function above.
+    m_shouldAbort = true;
 }
 
 void SimThread::setPosition(const Quackle::GamePosition &position) {
@@ -62,11 +68,14 @@ SimThreads::SimThreads(QObject *parent) : QObject(parent) {
     for (int i = 0; i < nThreads; i++) {
         SimThread *t = new SimThread;
         m_threads.push_back(t);
-        connect(t, SIGNAL(iterationsDone()), this, SLOT(iterationsDone()));
+        connect(t, SIGNAL(iterationsDone(int)), this, SLOT(iterationsDone(int)));
     }
 }
 
 SimThreads::~SimThreads() {
+    for (int i = 0; i < m_threads.length(); i++) {
+        delete m_threads[i];
+    }
 }
 
 void SimThreads::setPosition(const Quackle::GamePosition &position) {
@@ -76,13 +85,20 @@ void SimThreads::setPosition(const Quackle::GamePosition &position) {
 }
 
 void SimThreads::startSim(int plies) {
+    m_totalIterations = 0;
     for (int i = 0; i < m_threads.length(); i++) {
         m_threads[i]->startSim(plies);
     }
 }
 
+int SimThreads::numThreads() {
+    return m_threads.length();
+}
+
 void SimThreads::iterationsDone(int nIterations) {
+    m_totalIterations += nIterations;
     // This many iterations have been done so far. Communicate back to parent.
+    UVcout << m_totalIterations << " iterations done!" << endl;
 }
 
 void SimThreads::setCurrentPlayerRack(const Quackle::Rack &rack) {
@@ -94,5 +110,11 @@ void SimThreads::setCurrentPlayerRack(const Quackle::Rack &rack) {
 void SimThreads::resetNumbers() {
     for (int i = 0; i < m_threads.length(); i++) {
         m_threads[i]->simulator()->resetNumbers();
+    }
+}
+
+void SimThreads::abort() {
+    for (int i = 0; i < m_threads.length(); i++) {
+        m_threads[i]->abort();
     }
 }

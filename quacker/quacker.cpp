@@ -922,6 +922,9 @@ void TopLevel::kibitz(int numberOfPlays, Quackle::ComputerPlayer *computerPlayer
 	}
 }
 
+/**
+ * Starts or stops threaded simulation.
+ */
 void TopLevel::threadedSimulate(bool startSimulation)
 {
 	m_simulateAction->setChecked(startSimulation);
@@ -932,8 +935,10 @@ void TopLevel::threadedSimulate(bool startSimulation)
 		m_simThreads.setPosition(m_game->currentPosition());
 		m_simThreads.startSim(m_plies);
 	}
-	else
-		m_simulationTimer->stop();
+	else 
+	{
+		m_simThreads.abort();
+	}
 
 }
 
@@ -1061,7 +1066,7 @@ void TopLevel::simulateToggled(bool startSimulation)
 	threadedSimulate(startSimulation);
 	if (startSimulation) {
 		switchToTab(ChoicesTabIndex);
-		statusMessage(tr("Starting threaded simulation. To stop the simulation, uncheck the \"Simulate\" menu entry in the Move menu."));
+		statusMessage(tr("Starting simulation with %1 threads. To stop the simulation, uncheck the \"Simulate\" menu entry in the Move menu.").arg(m_simThreads.numThreads()));
 		partialOppoRackChanged();
 	}
 

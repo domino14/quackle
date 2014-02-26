@@ -39,6 +39,7 @@ public:
 	const Quackle::MoveList &moves() const;
 	void startSim(int plies);
 	Quackle::Simulator* simulator();
+	void abort();
 protected:
 	void run();
 
@@ -47,6 +48,8 @@ signals:
 
 private:
 	int m_plies;
+	int m_iterationsPerLoop;
+	bool m_shouldAbort;
 	Quackle::GamePosition m_position;
 	Quackle::MoveList m_moves;
 	Quackle::Simulator *m_simulator;
@@ -58,12 +61,15 @@ Q_OBJECT
 public:
 	SimThreads(QObject *parent = 0);
 	~SimThreads();
+	int numThreads();
 	void startSim(int plies);
 	void setCurrentPlayerRack(const Quackle::Rack &rack);
 	void resetNumbers();
 	void setPosition(const Quackle::GamePosition &position);
+	void abort();
 private:
 	QList<SimThread*> m_threads;
+	int m_totalIterations;
 private slots:
 	void iterationsDone(int);
 };
