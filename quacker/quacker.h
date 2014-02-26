@@ -28,6 +28,7 @@
 
 #include <datamanager.h>
 #include "oppothread.h"
+#include "simthread.h"
 #include <sim.h>
 
 #include <quackleio/dictimplementation.h>
@@ -117,6 +118,7 @@ public slots:
 	void commitTopChoice();
 	void simulate(bool startSimulation);
 	void simulateToggled(bool startSimulation);
+	void threadedSimulate(bool startSimulation);
 	void clearSimulationResults();
 
 	void showAscii();
@@ -302,6 +304,7 @@ private:
 	QList<OppoThread *> m_oppoThreads;
 	QList<OppoThread *> m_otherOppoThreads;
 
+	SimThreads m_simThreads;
 	QTimer *m_timer;
 	QTimer *m_simulationTimer;
 

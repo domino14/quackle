@@ -56,6 +56,7 @@ using namespace std;
 #include "simviewer.h"
 #include "widgetfactory.h"
 #include "view.h"
+#include "simthread.h"
 
 const int kExtraPlaysToKibitz = 15;
 
@@ -485,7 +486,7 @@ void TopLevel::setRack(const Quackle::Rack &rack)
 	}
 
 	m_game->currentPosition().setPlayerRack(m_game->currentPosition().currentPlayer().id(), rackToSet);
-	m_simulator->currentPosition().setCurrentPlayerRack(rackToSet);
+	m_simThreads.setCurrentPlayerRack(rackToSet);
 	updatePositionViews();
 
 	statusMessage(tr("%1's rack set to %2.").arg(QuackleIO::Util::uvStringToQString(m_game->currentPosition().currentPlayer().name())).arg(QuackleIO::Util::letterStringToQString(rackToSet.tiles())));
@@ -921,6 +922,21 @@ void TopLevel::kibitz(int numberOfPlays, Quackle::ComputerPlayer *computerPlayer
 	}
 }
 
+void TopLevel::threadedSimulate(bool startSimulation)
+{
+	m_simulateAction->setChecked(startSimulation);
+
+	if (startSimulation)
+	{
+		logfileChanged();
+		m_simThreads.setPosition(m_game->currentPosition());
+		m_simThreads.startSim(m_plies);
+	}
+	else
+		m_simulationTimer->stop();
+
+}
+
 void TopLevel::kibitzThreadFinished()
 {
 	QString name;
@@ -1039,19 +1055,16 @@ void TopLevel::simulate(bool startSimulation)
 
 void TopLevel::simulateToggled(bool startSimulation)
 {
-	if (!m_game->hasPositions())
+	if (!m_game->hasPositions()) {
 		return;
-
-	simulate(startSimulation);
-
-	if (startSimulation)
-	{
+	}
+	threadedSimulate(startSimulation);
+	if (startSimulation) {
 		switchToTab(ChoicesTabIndex);
-		statusMessage(tr("Starting simulation. To stop the simulation, uncheck the \"Simulate\" menu entry in the Move menu."));
-
-		// Make sure the simulator has the correct partial oppo rack.
+		statusMessage(tr("Starting threaded simulation. To stop the simulation, uncheck the \"Simulate\" menu entry in the Move menu."));
 		partialOppoRackChanged();
 	}
+
 }
 
 void TopLevel::clearSimulationResults()
@@ -1059,7 +1072,7 @@ void TopLevel::clearSimulationResults()
 	if (!m_game->hasPositions())
 		return;
 
-	m_simulator->resetNumbers();
+	m_simThreads.resetNumbers();
 
 	updateMoveViews();
 	updateSimViews();
