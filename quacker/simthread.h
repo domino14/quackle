@@ -67,11 +67,15 @@ public:
 	void resetNumbers();
 	void setPosition(const Quackle::GamePosition &position);
 	void abort();
+	bool hasSimulationResults() const;
+	int iterations();
 private:
 	QList<SimThread*> m_threads;
 	int m_totalIterations;
-private slots:
+signals:
 	void iterationsDone(int);
+private slots:
+	void partialIterations(int);
 };
 
 inline const Quackle::GamePosition &SimThread::position() const
@@ -83,5 +87,12 @@ inline Quackle::Simulator* SimThread::simulator() {
 	return m_simulator;
 }
 
+inline int SimThreads::iterations() {
+    return m_totalIterations;
+}
+
+inline bool SimThreads::hasSimulationResults() const {
+    return m_totalIterations > 0;
+}
 
 #endif

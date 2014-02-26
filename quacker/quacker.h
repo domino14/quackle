@@ -234,6 +234,8 @@ protected slots:
 	void birthdayBash();
 	void birthdayGram(int index, bool on);
 
+	void simIterationsDone(int);
+
 signals:
 	// emitted when views (eg board) should update based on the
 	// current position (includes board information, current candidate play
@@ -304,7 +306,7 @@ private:
 	QList<OppoThread *> m_oppoThreads;
 	QList<OppoThread *> m_otherOppoThreads;
 
-	SimThreads m_simThreads;
+	SimThreads *m_simThreads;
 	QTimer *m_timer;
 	QTimer *m_simulationTimer;
 

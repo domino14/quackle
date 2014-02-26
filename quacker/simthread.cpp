@@ -61,14 +61,19 @@ void SimThread::setPosition(const Quackle::GamePosition &position) {
 }
 
 //////////////////////////////////////////
-/** Thread manager */
+/**
+ * Thread manager. This class should replace uses of m_simulator in
+ * quacker.cpp and hopefully in other places later (so computer players 
+ * can also use all threads available to them).
+ */
 SimThreads::SimThreads(QObject *parent) : QObject(parent) {
     int nThreads = QThread::idealThreadCount();
+    m_totalIterations = 0;
     UVcout << "Will create " << nThreads << " threads.\n";
     for (int i = 0; i < nThreads; i++) {
         SimThread *t = new SimThread;
         m_threads.push_back(t);
-        connect(t, SIGNAL(iterationsDone(int)), this, SLOT(iterationsDone(int)));
+        connect(t, SIGNAL(iterationsDone(int)), this, SLOT(partialIterations(int)));
     }
 }
 
@@ -95,10 +100,10 @@ int SimThreads::numThreads() {
     return m_threads.length();
 }
 
-void SimThreads::iterationsDone(int nIterations) {
+void SimThreads::partialIterations(int nIterations) {
     m_totalIterations += nIterations;
     // This many iterations have been done so far. Communicate back to parent.
-    UVcout << m_totalIterations << " iterations done!" << endl;
+    emit iterationsDone(m_totalIterations);
 }
 
 void SimThreads::setCurrentPlayerRack(const Quackle::Rack &rack) {

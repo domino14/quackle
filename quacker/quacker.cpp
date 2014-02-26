@@ -75,10 +75,9 @@ TopLevel::TopLevel(QWidget *parent)
 	m_settings->preInitialize();
 	m_settings->createGUI();
 	connect(m_settings, SIGNAL(refreshViews()), this, SLOT(updateAllViews()));
-	
 	m_game = new Quackle::Game;
 	m_simulator = new Quackle::Simulator;
-
+	m_simThreads = new SimThreads;
 	createMenu();
 	createWidgets();
 
@@ -95,6 +94,7 @@ TopLevel::~TopLevel()
 	QuackleIO::Queenie::cleanUp();
 	delete m_game;
 	delete m_simulator;
+	delete m_simThreads;
 	delete m_quackerSettings;
 }
 
@@ -153,6 +153,7 @@ void TopLevel::finishInitialization()
 	connect(m_birthdayTimer, SIGNAL(timeout()), this, SLOT(birthdayBash()));
 
 	QTimer::singleShot(0, this, SLOT(introduceToUser()));
+	connect(m_simThreads, SIGNAL(iterationsDone(int)), this, SLOT(simIterationsDone(int)));
 }
 
 void TopLevel::introduceToUser()
@@ -486,7 +487,7 @@ void TopLevel::setRack(const Quackle::Rack &rack)
 	}
 
 	m_game->currentPosition().setPlayerRack(m_game->currentPosition().currentPlayer().id(), rackToSet);
-	m_simThreads.setCurrentPlayerRack(rackToSet);
+	m_simThreads->setCurrentPlayerRack(rackToSet);
 	updatePositionViews();
 
 	statusMessage(tr("%1's rack set to %2.").arg(QuackleIO::Util::uvStringToQString(m_game->currentPosition().currentPlayer().name())).arg(QuackleIO::Util::letterStringToQString(rackToSet.tiles())));
@@ -625,6 +626,7 @@ void TopLevel::updatePositionViews()
 	updateListerDialogWithRack();
 }
 
+/** This updates the table of moves */
 void TopLevel::updateMoveViews()
 {
 	if (m_simulator->hasSimulationResults())
@@ -932,14 +934,19 @@ void TopLevel::threadedSimulate(bool startSimulation)
 	if (startSimulation)
 	{
 		logfileChanged();
-		m_simThreads.setPosition(m_game->currentPosition());
-		m_simThreads.startSim(m_plies);
+		m_simThreads->setPosition(m_game->currentPosition());
+		m_simThreads->startSim(m_plies);
 	}
 	else 
 	{
-		m_simThreads.abort();
+		m_simThreads->abort();
 	}
 
+}
+
+void TopLevel::simIterationsDone(int iterations) {
+	// Display this in the sim widget.
+	updateSimViews();
 }
 
 void TopLevel::kibitzThreadFinished()
@@ -1066,7 +1073,7 @@ void TopLevel::simulateToggled(bool startSimulation)
 	threadedSimulate(startSimulation);
 	if (startSimulation) {
 		switchToTab(ChoicesTabIndex);
-		statusMessage(tr("Starting simulation with %1 threads. To stop the simulation, uncheck the \"Simulate\" menu entry in the Move menu.").arg(m_simThreads.numThreads()));
+		statusMessage(tr("Starting simulation with %1 threads. To stop the simulation, uncheck the \"Simulate\" menu entry in the Move menu.").arg(m_simThreads->numThreads()));
 		partialOppoRackChanged();
 	}
 
@@ -1077,7 +1084,7 @@ void TopLevel::clearSimulationResults()
 	if (!m_game->hasPositions())
 		return;
 
-	m_simThreads.resetNumbers();
+	m_simThreads->resetNumbers();
 
 	updateMoveViews();
 	updateSimViews();
@@ -1248,7 +1255,10 @@ void TopLevel::incrementSimulation()
 
 void TopLevel::updateSimViews()
 {
-	m_simulatorWidget->setTitle(m_simulator->hasSimulationResults()? tr("Simulation: %2 iterations").arg(m_simulator->iterations()) : tr("Simulation"));
+	m_simulatorWidget->setTitle(
+		m_simThreads->hasSimulationResults() ? 
+		tr("Simulation: %2 iterations").arg(m_simThreads->iterations()) : 
+		tr("Simulation"));
 
 	if (m_simViewer && m_simViewer->isVisible())
 		m_simViewer->setSimulator(*m_simulator);
