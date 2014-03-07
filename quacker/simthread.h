@@ -68,10 +68,19 @@ public:
 	void setPosition(const Quackle::GamePosition &position);
 	void abort();
 	bool hasSimulationResults() const;
-	int iterations();
+	int iterations() const;
+	void setIncludedMoves(const Quackle::MoveList &moves);
+	void setIgnoreOppos(bool ignore);
+    void setPartialOppoRack(const Quackle::Rack &rack);
+    Quackle::GamePosition &currentPosition();
+    const Quackle::GamePosition &currentPosition() const;
+    Quackle::MoveList moves(bool prune = false, bool byWin = false);
+    //const Quackle::SimmedMoveList &simmedMoves() const;
 private:
 	QList<SimThread*> m_threads;
+	enum MetricType {MetricEquity, MetricWins};
 	int m_totalIterations;
+	double avgAcrossThreads(int, MetricType);
 signals:
 	void iterationsDone(int);
 private slots:
@@ -87,12 +96,22 @@ inline Quackle::Simulator* SimThread::simulator() {
 	return m_simulator;
 }
 
-inline int SimThreads::iterations() {
+inline int SimThreads::iterations() const {
     return m_totalIterations;
 }
 
 inline bool SimThreads::hasSimulationResults() const {
     return m_totalIterations > 0;
+}
+// Assume current position is the same for all 4 threads (As it should be!)
+inline Quackle::GamePosition &SimThreads::currentPosition()
+{
+    return m_threads[0]->simulator()->currentPosition();
+}
+
+inline const Quackle::GamePosition &SimThreads::currentPosition() const
+{
+    return m_threads[0]->simulator()->currentPosition();
 }
 
 #endif

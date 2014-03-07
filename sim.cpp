@@ -282,6 +282,7 @@ void Simulator::simulate(int plies)
 		double residual = 0;
 
 		(*moveIt).setNumberLevels(levels + 1);
+		(*moveIt).setIterations(m_iterations);
 
 		int levelNumber = 1;
 		for (LevelList::iterator levelIt = (*moveIt).levels.begin(); levelNumber <= levels + 1 && levelIt != (*moveIt).levels.end() && !m_simulatedGame.currentPosition().gameOver(); ++levelIt, ++levelNumber)

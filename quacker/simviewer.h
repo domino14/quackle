@@ -24,6 +24,7 @@
 #include <QDialog>
 
 #include <sim.h>
+#include "simthread.h"
 
 class QPushButton;
 class QTabWidget;
@@ -40,7 +41,7 @@ public:
 	virtual QSize sizeHint() const;
 
 public slots:
-	void setSimulator(const Quackle::Simulator &simulator);
+	void setSimulator(const SimThreads &);
 
 	void done();
 
@@ -57,9 +58,9 @@ public:
 	AveragesTab(QWidget *parent = 0);
 
 public slots:
-	void setSimulator(const Quackle::Simulator &simulator);
+	void setSimulator(const SimThreads &);
 
-	QString statisticTable(const Quackle::Simulator &simulator);
+	QString statisticTable(const SimThreads &);
 
 	void explain();
 

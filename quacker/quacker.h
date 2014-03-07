@@ -116,7 +116,6 @@ public slots:
 	void htmlReport();
 	void graphicalReport();
 	void commitTopChoice();
-	void simulate(bool startSimulation);
 	void simulateToggled(bool startSimulation);
 	void threadedSimulate(bool startSimulation);
 	void clearSimulationResults();
@@ -213,9 +212,7 @@ protected slots:
 
 	// main timer
 	void timeout();
-
-	// simulation timer
-	void incrementSimulation();
+	
 	void updateSimViews();
 
 	// simulator settings:
@@ -308,7 +305,6 @@ private:
 
 	SimThreads *m_simThreads;
 	QTimer *m_timer;
-	QTimer *m_simulationTimer;
 
 	QMap<OppoThread *, OppoThreadProgressBar *> m_progressIndicators;
 

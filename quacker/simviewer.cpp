@@ -51,10 +51,13 @@ SimViewer::SimViewer(QWidget *parent)
 	setWindowTitle(tr("Simulation Results - Quackle"));
 }
 
-void SimViewer::setSimulator(const Quackle::Simulator &simulator)
+void SimViewer::setSimulator(const SimThreads &simulator)
 {
 	m_averagesTab->setSimulator(simulator);
-	setWindowTitle(tr("%1 iterations of %2 - Quackle").arg(simulator.iterations()).arg(QuackleIO::Util::letterStringToQString(simulator.currentPosition().currentPlayer().rack().tiles())));
+	setWindowTitle(tr("%1 iterations of %2 - Quackle").
+	               arg(simulator.iterations()).
+	               arg(QuackleIO::Util::letterStringToQString(
+	                   simulator.currentPosition().currentPlayer().rack().tiles())));
 }
 
 void SimViewer::done()
@@ -79,8 +82,8 @@ AveragesTab::AveragesTab(QWidget *parent)
 	//topLayout->addWidget(explainButton);
 }
 
-void AveragesTab::setSimulator(const Quackle::Simulator &simulator)
-{
+void AveragesTab::setSimulator(const SimThreads &simulator)
+{ /* XXX FIX!!!
 	QString html;
 
 	html += statisticTable(simulator);
@@ -120,11 +123,11 @@ void AveragesTab::setSimulator(const Quackle::Simulator &simulator)
 	}
 
 	// TODO don't scroll to top when resetting
-	m_textEdit->setHtml(html);
+	m_textEdit->setHtml(html);*/
 }
 
-QString AveragesTab::statisticTable(const Quackle::Simulator &simulator)
-{
+QString AveragesTab::statisticTable(const SimThreads &simulator)
+{/* XXX: FIXXXXX
 	QString ret;
 	for (int levelIndex = 0; levelIndex < simulator.numLevels(); ++levelIndex)
 	{
@@ -170,7 +173,7 @@ QString AveragesTab::statisticTable(const Quackle::Simulator &simulator)
 		}
 	}
 
-	return ret;
+	return ret;*/
 }
 
 void AveragesTab::explain()

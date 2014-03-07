@@ -145,8 +145,10 @@ struct SimmedMove
     AveragedValue wins;
 
     PositionStatistics getPositionStatistics(int level, int playerIndex) const;
-
+    int iterations() const;
+    void setIterations(int);
 private:
+    int m_iterations;
     bool m_includeInSimulation;
 };
 
@@ -158,6 +160,16 @@ inline bool SimmedMove::includeInSimulation() const
 inline void SimmedMove::setIncludeInSimulation(bool includeInSimulation)
 {
     m_includeInSimulation = includeInSimulation;
+}
+
+inline int SimmedMove::iterations() const
+{
+    return m_iterations;
+}
+
+inline void SimmedMove::setIterations(int iterations)
+{
+    m_iterations = iterations;
 }
 
 typedef vector<SimmedMove> SimmedMoveList;

@@ -67,7 +67,7 @@ void SimThread::setPosition(const Quackle::GamePosition &position) {
  * can also use all threads available to them).
  */
 SimThreads::SimThreads(QObject *parent) : QObject(parent) {
-    int nThreads = QThread::idealThreadCount();
+    int nThreads = qMax(QThread::idealThreadCount(), 1);
     m_totalIterations = 0;
     UVcout << "Will create " << nThreads << " threads.\n";
     for (int i = 0; i < nThreads; i++) {
@@ -84,15 +84,16 @@ SimThreads::~SimThreads() {
 }
 
 void SimThreads::setPosition(const Quackle::GamePosition &position) {
-    for (int i = 0; i < m_threads.length(); i++) {
-        m_threads[i]->setPosition(position);
+    SimThread* thread;
+    foreach(thread, m_threads) {
+        thread->setPosition(position);
     }
 }
 
 void SimThreads::startSim(int plies) {
-    m_totalIterations = 0;
-    for (int i = 0; i < m_threads.length(); i++) {
-        m_threads[i]->startSim(plies);
+    SimThread* thread;
+    foreach(thread, m_threads) {
+        thread->startSim(plies);
     }
 }
 
@@ -107,19 +108,100 @@ void SimThreads::partialIterations(int nIterations) {
 }
 
 void SimThreads::setCurrentPlayerRack(const Quackle::Rack &rack) {
-    for (int i = 0; i < m_threads.length(); i++) {
-        m_threads[i]->simulator()->currentPosition().setCurrentPlayerRack(rack);
+    SimThread* thread;
+    foreach(thread, m_threads) {
+        thread->simulator()->currentPosition().setCurrentPlayerRack(rack);
     }
 }
 
 void SimThreads::resetNumbers() {
-    for (int i = 0; i < m_threads.length(); i++) {
-        m_threads[i]->simulator()->resetNumbers();
+    m_totalIterations = 0;
+    SimThread* thread;
+    foreach(thread, m_threads) {
+        thread->simulator()->resetNumbers();
     }
 }
 
 void SimThreads::abort() {
-    for (int i = 0; i < m_threads.length(); i++) {
-        m_threads[i]->abort();
+    SimThread* thread;
+    foreach(thread, m_threads) {
+        thread->abort();
     }
+}
+
+void SimThreads::setIncludedMoves(const Quackle::MoveList &moves) {
+    SimThread* thread;
+    foreach(thread, m_threads) {
+        thread->simulator()->setIncludedMoves(moves);
+    }
+}
+
+void SimThreads::setIgnoreOppos(bool ignore) {
+    SimThread* thread;
+    foreach(thread, m_threads) {
+        thread->simulator()->setIgnoreOppos(ignore);
+    }
+}
+
+void SimThreads::setPartialOppoRack(const Quackle::Rack &rack) {
+    SimThread* thread;
+    foreach(thread, m_threads) {
+        thread->simulator()->setPartialOppoRack(rack);
+    }
+}
+
+Quackle::MoveList SimThreads::moves(bool prune, bool byWin) {
+    // This needs to act like Simulator::moves but combine across all
+    // simulators. Luckily m_simmedMoves for every simulator has
+    // a deterministic order.
+    Quackle::MoveList ret;
+    const Quackle::SimmedMove* simmedMove;
+    const bool useCalculatedEquity = hasSimulationResults();
+    // Need to go through std::vectors by index instead of iterator. Again
+    // assume these are all in the same order for all simulators.
+    
+    for (size_t i = 0; i < m_threads[0]->simulator()->simmedMoves().size(); i++) {
+        simmedMove = &(m_threads[0]->simulator()->simmedMoves()[i]);
+        if (prune && !simmedMove->includeInSimulation())
+            continue;
+
+        Quackle::Move move(simmedMove->move);
+        if (useCalculatedEquity) {
+            move.equity = avgAcrossThreads(i, MetricEquity);
+            move.win = avgAcrossThreads(i, MetricWins);
+        }
+        ret.push_back(move);
+    }
+    if (byWin && useCalculatedEquity) {
+        Quackle::MoveList::sort(ret, Quackle::MoveList::Win);
+    } else {
+        Quackle::MoveList::sort(ret, Quackle::MoveList::Equity);
+    }
+    return ret;
+}
+
+/**
+ * Calculates the metric of the simmed move at the given index.
+ * NOTE: This assumes that all simmedMoves are in the same order across
+ * all threads. They should be because they are not sorted in the
+ * sim threads at all and they are added in order.
+ * @param  index 
+ * @param  metric
+ */
+double SimThreads::avgAcrossThreads(int index, MetricType metric) {
+    double metricSum = 0;
+    int iterations = 0;
+    const Quackle::SimmedMove* simmedMove;
+    foreach(SimThread* thread, m_threads) {
+        int this_iter;
+        simmedMove = &(thread->simulator()->simmedMoves()[index]);
+        this_iter = simmedMove->iterations();
+        iterations += this_iter;
+        if (metric == MetricEquity) {
+            metricSum += simmedMove->calculateEquity() * this_iter;
+        } else if (metric == MetricWins) {
+            metricSum += simmedMove->wins.averagedValue() * this_iter;
+        }
+    }   
+    return metricSum / (double)iterations;
 }

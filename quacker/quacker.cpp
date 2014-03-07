@@ -145,8 +145,6 @@ void TopLevel::finishInitialization()
 
 	m_timer = new QTimer(this);
 	connect(m_timer, SIGNAL(timeout()), this, SLOT(timeout()));
-	m_simulationTimer = new QTimer(this);
-	connect(m_simulationTimer, SIGNAL(timeout()), this, SLOT(incrementSimulation()));
 
 	// Birthday
 	m_birthdayTimer = new QTimer(this);
@@ -408,7 +406,7 @@ void TopLevel::setCandidateMove(const Quackle::Move &move)
 	// a check if we have simulation results -- but we don't want to send out
 	// a moves changed signal if we don't have results because
 	// we just sent out a position changed signal
-	if (m_simulator->hasSimulationResults())
+	if (m_simThreads->hasSimulationResults())
 		updateMoveViews();
 }
 
@@ -522,7 +520,7 @@ void TopLevel::goToHistoryLocation(const Quackle::HistoryLocation &location)
 void TopLevel::stopEverything()
 {
 	// stop simulation if it's going
-	simulate(false);
+	threadedSimulate(false);
 
 	for (QList<OppoThread *>::iterator it = m_otherOppoThreads.begin(); it != m_otherOppoThreads.end(); ++it)
 		(*it)->abort();
@@ -629,8 +627,8 @@ void TopLevel::updatePositionViews()
 /** This updates the table of moves */
 void TopLevel::updateMoveViews()
 {
-	if (m_simulator->hasSimulationResults())
-		emit movesChanged(m_simulator->moves(/* prune */ true, /* sort by win */ true));
+	if (m_simThreads->hasSimulationResults())
+		emit movesChanged(m_simThreads->moves(/* prune */ true, /* sort by win */ true));
 	else
 		emit movesChanged(m_game->currentPosition().moves());
 
@@ -947,6 +945,9 @@ void TopLevel::threadedSimulate(bool startSimulation)
 void TopLevel::simIterationsDone(int iterations) {
 	// Display this in the sim widget.
 	updateSimViews();
+	if (iterations % 10 == 0) {
+		updateMoveViews();
+	}
 }
 
 void TopLevel::kibitzThreadFinished()
@@ -1045,25 +1046,25 @@ void TopLevel::commitTopChoice()
 
 void TopLevel::ensureUpToDateSimulatorMoveList()
 {
-	m_simulator->setIncludedMoves(m_game->currentPosition().moves());
+	m_simThreads->setIncludedMoves(m_game->currentPosition().moves());
 }
 
-void TopLevel::simulate(bool startSimulation)
-{
-	m_simulateAction->setChecked(startSimulation);
+// void TopLevel::simulate(bool startSimulation)
+// {
+// 	m_simulateAction->setChecked(startSimulation);
 
-	// it's not so useful to have sim control show/hide
-	// like this
-	//m_simulatorWidget->setVisible(startSimulation);
+// 	// it's not so useful to have sim control show/hide
+// 	// like this
+// 	//m_simulatorWidget->setVisible(startSimulation);
 
-	if (startSimulation)
-	{
-		logfileChanged();
-		incrementSimulation();
-	}
-	else
-		m_simulationTimer->stop();
-}
+// 	if (startSimulation)
+// 	{
+// 		logfileChanged();
+// 		incrementSimulation();
+// 	}
+// 	else
+// 		m_simulationTimer->stop();
+// }
 
 void TopLevel::simulateToggled(bool startSimulation)
 {
@@ -1105,7 +1106,7 @@ void TopLevel::pliesSet(const QString &plyString)
 
 void TopLevel::ignoreOpposChanged()
 {
-	m_simulator->setIgnoreOppos(m_ignoreOpposCheck->isChecked());
+	m_simThreads->setIgnoreOppos(m_ignoreOpposCheck->isChecked());
 }
 
 void TopLevel::updatePliesCombo()
@@ -1225,7 +1226,7 @@ void TopLevel::partialOppoRackChanged()
 		return;
 	}
 
-	m_simulator->setPartialOppoRack(rack);
+	m_simThreads->setPartialOppoRack(rack);
 }
 
 void TopLevel::showSimulationDetails()
@@ -1233,25 +1234,24 @@ void TopLevel::showSimulationDetails()
 	if (!m_simViewer)
 		m_simViewer = new SimViewer(this);
 
-	m_simViewer->setSimulator(*m_simulator);
+	m_simViewer->setSimulator(*m_simThreads);
 	m_simViewer->show();
 
 	updateSimViews();
 }
 
-void TopLevel::incrementSimulation()
-{
-	if (m_simulateAction->isChecked())
-	{
-		m_simulator->simulate(m_plies);
-		m_simulationTimer->start(0);
+// void TopLevel::incrementSimulation()
+// {
+// 	if (m_simulateAction->isChecked())
+// 	{
+// 		m_simulator->simulate(m_plies);
 
-		if (m_simulator->iterations() % 10 == 0)
-			updateMoveViews();
+// 		if (m_simulator->iterations() % 10 == 0)
+// 			updateMoveViews();
 
-		updateSimViews();
-	}
-}
+// 		updateSimViews();
+// 	}
+// }
 
 void TopLevel::updateSimViews()
 {
@@ -1261,7 +1261,7 @@ void TopLevel::updateSimViews()
 		tr("Simulation"));
 
 	if (m_simViewer && m_simViewer->isVisible())
-		m_simViewer->setSimulator(*m_simulator);
+		m_simViewer->setSimulator(*m_simThreads);
 }
 
 void TopLevel::loadFile(const QString &filename)
@@ -1555,7 +1555,7 @@ void TopLevel::showToHuman()
 	// make sure that the internal order of rack is how user likes it
 	m_game->currentPosition().setCurrentPlayerRack(rack);
 
-	m_simulator->setPosition(m_game->currentPosition());
+	m_simThreads->setPosition(m_game->currentPosition());
 
 	updateHistoryViews();
 	updatePositionViews();
